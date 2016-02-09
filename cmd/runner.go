@@ -438,6 +438,7 @@ func (p *Runner) SetupEnvironment(runnerCtx context.Context) (*RunnerShared, err
 			Name:    "setup environment",
 			Owner:   "wercker",
 			Version: util.Version(),
+			SafeID:  "setup environment",
 		}),
 	}
 	finisher := p.StartStep(shared, setupEnvironmentStep, 2)

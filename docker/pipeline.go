@@ -108,6 +108,11 @@ func NewDockerPipeline(name string, config *core.Config, options *core.PipelineO
 	}
 	// if we found some valid after steps, prepend init
 	if len(afterSteps) > 0 {
+		initStep, err := core.NewWerckerInitStep(options)
+		if err != nil {
+			return nil, err
+		}
+
 		afterSteps = append([]core.Step{initStep}, afterSteps...)
 	}
 

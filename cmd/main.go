@@ -945,6 +945,7 @@ func executePipeline(cmdCtx context.Context, options *core.PipelineOptions, dock
 				Name:    "store",
 				Owner:   "wercker",
 				Version: util.Version(),
+				SafeID:  "store",
 			}),
 		}
 	}

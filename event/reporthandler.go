@@ -15,22 +15,22 @@
 package event
 
 import (
-	"fmt"
-
 	"github.com/wercker/reporter-client"
 	"github.com/wercker/wercker/core"
 	"github.com/wercker/wercker/util"
+	"golang.org/x/net/context"
 )
 
 // NewReportHandler will create a new ReportHandler.
 func NewReportHandler(werckerHost, token string) (*ReportHandler, error) {
-	r, err := reporter.New(werckerHost, token)
+	logger := util.RootLogger().WithField("Logger", "Reporter")
+
+	r, err := reporter.NewClient(werckerHost, token)
 	if err != nil {
 		return nil, err
 	}
 
 	writers := make(map[string]*reporter.LogWriter)
-	logger := util.RootLogger().WithField("Logger", "Reporter")
 	h := &ReportHandler{
 		reporter: r,
 		writers:  writers,
@@ -39,14 +39,14 @@ func NewReportHandler(werckerHost, token string) (*ReportHandler, error) {
 	return h, nil
 }
 
-func mapBuildSteps(counter *util.Counter, phase string, steps ...core.Step) []*reporter.NewStep {
-	buffer := make([]*reporter.NewStep, len(steps))
+func mapSteps(phase string, steps ...core.Step) []reporter.NewStep {
+	buffer := make([]reporter.NewStep, len(steps))
 	for i, s := range steps {
-		buffer[i] = &reporter.NewStep{
+		buffer[i] = reporter.NewStep{
 			DisplayName: s.DisplayName(),
 			Name:        s.Name(),
-			Order:       counter.Increment(),
 			Phase:       phase,
+			StepSafeID:  s.SafeID(),
 		}
 	}
 	return buffer
@@ -54,31 +54,23 @@ func mapBuildSteps(counter *util.Counter, phase string, steps ...core.Step) []*r
 
 // A ReportHandler reports all events to the wercker-api.
 type ReportHandler struct {
-	reporter *reporter.Reporter
+	reporter *reporter.ReportingClient
 	writers  map[string]*reporter.LogWriter
 	logger   *util.LogEntry
 }
 
 // BuildStepStarted will handle the BuildStepStarted event.
-func (h *ReportHandler) BuildStepStarted(args *core.BuildStepStartedArgs) {
-	opts := &reporter.PipelineStepStartedArgs{
-		BuildID:  args.Options.BuildID,
-		DeployID: args.Options.DeployID,
-		StepName: args.Step.Name(),
-		Order:    args.Order,
+func (h *ReportHandler) StepStarted(args *core.BuildStepStartedArgs) {
+	opts := reporter.RunStepStartedArgs{
+		RunID:      args.Options.PipelineID,
+		StepSafeID: args.Step.SafeID(),
 	}
 
-	h.reporter.PipelineStepStarted(opts)
+	h.reporter.RunStepStarted(context.TODO(), opts)
 }
 
-func (h *ReportHandler) generateKey(pipelineID, stepName string, order int) string {
-	return fmt.Sprintf("%s_%s_%d", pipelineID, stepName, order)
-}
-
-func (h *ReportHandler) flushLogs(pipelineID, stepName string, order int) error {
-	key := h.generateKey(pipelineID, stepName, order)
-
-	if writer, ok := h.writers[key]; ok {
+func (h *ReportHandler) flushLogs(safeID string) error {
+	if writer, ok := h.writers[safeID]; ok {
 		return writer.Flush()
 	}
 
@@ -86,62 +78,55 @@ func (h *ReportHandler) flushLogs(pipelineID, stepName string, order int) error 
 }
 
 // BuildStepFinished will handle the BuildStepFinished event.
-func (h *ReportHandler) BuildStepFinished(args *core.BuildStepFinishedArgs) {
-	h.flushLogs(args.Options.PipelineID, args.Step.Name(), args.Order)
+func (h *ReportHandler) StepFinished(args *core.BuildStepFinishedArgs) {
+	h.flushLogs(args.Step.SafeID())
 
-	opts := &reporter.PipelineStepFinishedArgs{
-		BuildID:               args.Options.BuildID,
-		DeployID:              args.Options.DeployID,
-		StepName:              args.Step.Name(),
-		Order:                 args.Order,
-		Successful:            args.Successful,
-		ArtifactURL:           args.ArtifactURL,
-		PackageURL:            args.PackageURL,
-		Message:               args.Message,
-		WerckerYamlContents:   args.WerckerYamlContents,
-		WerckerConfigContents: args.WerckerYamlContents,
+	result := "failed"
+	if args.Successful {
+		result = "passed"
 	}
 
-	h.reporter.PipelineStepFinished(opts)
+	opts := reporter.RunStepFinishedArgs{
+		RunID:               args.Options.PipelineID,
+		StepSafeID:          args.Step.SafeID(),
+		Result:              result,
+		ArtifactURL:         args.ArtifactURL,
+		PackageURL:          args.PackageURL,
+		Message:             args.Message,
+		WerckerYamlContents: args.WerckerYamlContents,
+	}
+
+	h.reporter.RunStepFinished(context.TODO(), opts)
 }
 
 // BuildStepsAdded will handle the BuildStepsAdded event.
-func (h *ReportHandler) BuildStepsAdded(args *core.BuildStepsAddedArgs) {
-	stepCounter := &util.Counter{Current: 3}
-	steps := mapBuildSteps(stepCounter, "mainSteps", args.Steps...)
+func (h *ReportHandler) StepsAdded(args *core.BuildStepsAddedArgs) {
+	steps := mapSteps("mainSteps", args.Steps...)
 
 	if args.StoreStep != nil {
-		storeStep := mapBuildSteps(stepCounter, "mainSteps", args.StoreStep)
+		storeStep := mapSteps("mainSteps", args.StoreStep)
 		steps = append(steps, storeStep...)
 	}
 
-	afterSteps := mapBuildSteps(stepCounter, "finalSteps", args.AfterSteps...)
+	afterSteps := mapSteps("finalSteps", args.AfterSteps...)
 	steps = append(steps, afterSteps...)
 
-	opts := &reporter.NewPipelineStepsArgs{
-		BuildID:  args.Options.BuildID,
-		DeployID: args.Options.DeployID,
-		Steps:    steps,
+	opts := reporter.RunStepsAddedArgs{
+		RunID: args.Options.PipelineID,
+		Steps: steps,
 	}
 
-	h.reporter.NewPipelineSteps(opts)
+	h.reporter.RunStepsAdded(context.TODO(), opts)
 }
 
 // getStepOutputWriter will check h.writers for a writer for the step, otherwise
 // it will create a new one.
 func (h *ReportHandler) getStepOutputWriter(args *core.LogsArgs) (*reporter.LogWriter, error) {
-	key := h.generateKey(args.Options.PipelineID, args.Step.Name(), args.Order)
-
-	opts := &reporter.PipelineStepReporterArgs{
-		BuildID:  args.Options.BuildID,
-		DeployID: args.Options.DeployID,
-		StepName: args.Step.Name(),
-		Order:    args.Order,
-	}
+	key := args.Step.SafeID()
 
 	writer, ok := h.writers[key]
 	if !ok {
-		w, err := h.reporter.PipelineStepReporter(opts)
+		w, err := reporter.NewLogWriter(h.reporter, args.Options.PipelineID, args.Step.SafeID(), args.Stream)
 		if err != nil {
 			return nil, err
 		}
@@ -157,6 +142,7 @@ func (h *ReportHandler) Logs(args *core.LogsArgs) {
 	if args.Hidden {
 		return
 	}
+
 	if args.Step == nil {
 		return
 	}
@@ -170,13 +156,12 @@ func (h *ReportHandler) Logs(args *core.LogsArgs) {
 }
 
 // BuildFinished will handle the BuildFinished event.
-func (h *ReportHandler) BuildFinished(args *core.BuildFinishedArgs) {
-	opts := &reporter.PipelineFinishedArgs{
-		BuildID:  args.Options.BuildID,
-		DeployID: args.Options.DeployID,
-		Result:   args.Result,
+func (h *ReportHandler) PipelineFinished(args *core.BuildFinishedArgs) {
+	opts := reporter.RunFinishedArgs{
+		RunID:  args.Options.PipelineID,
+		Result: args.Result,
 	}
-	h.reporter.PipelineFinished(opts)
+	h.reporter.RunFinished(context.TODO(), opts)
 }
 
 // FullPipelineFinished closes current writers, making sure they have flushed
@@ -196,10 +181,10 @@ func (h *ReportHandler) Close() error {
 
 // ListenTo will add eventhandlers to e.
 func (h *ReportHandler) ListenTo(e *core.NormalizedEmitter) {
-	e.AddListener(core.BuildFinished, h.BuildFinished)
-	e.AddListener(core.BuildStepsAdded, h.BuildStepsAdded)
-	e.AddListener(core.BuildStepStarted, h.BuildStepStarted)
-	e.AddListener(core.BuildStepFinished, h.BuildStepFinished)
+	e.AddListener(core.BuildFinished, h.PipelineFinished)
+	e.AddListener(core.BuildStepFinished, h.StepFinished)
+	e.AddListener(core.BuildStepsAdded, h.StepsAdded)
+	e.AddListener(core.BuildStepStarted, h.StepStarted)
 	e.AddListener(core.FullPipelineFinished, h.FullPipelineFinished)
 	e.AddListener(core.Logs, h.Logs)
 }

@@ -32,6 +32,8 @@ import:
     ref:     586ef24
     vcs:     git
   - package: github.com/wercker/reporter-client
+    ref:     generic_pipelines
+    vcs:     git
   - package: github.com/inconshreveable/go-keen
     ref:     3b8ced9
     vcs:     git
