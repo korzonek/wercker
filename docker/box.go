@@ -314,7 +314,7 @@ func (b *DockerBox) RecoverInteractive(cwd string, pipeline core.Pipeline, step 
 }
 
 func (b *DockerBox) getContainerName() string {
-	return "wercker-pipeline-" + b.options.PipelineID
+	return "wercker-pipeline-" + b.options.RunID
 }
 
 // Run creates the container and runs it.

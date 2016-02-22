@@ -165,21 +165,18 @@ func (s *OptionsSuite) TestEmptyBuildOptions() {
 	test := func(c *cli.Context) {
 		opts, err := core.NewBuildOptions(util.NewCLISettings(c), emptyEnv())
 		s.Nil(err)
-		s.NotEqual("", opts.BuildID)
-		s.Equal(opts.BuildID, opts.PipelineID)
-		s.Equal("", opts.DeployID)
+		s.NotEqual("", opts.RunID)
+		s.Equal(opts.RunID, opts.RunID)
 	}
 	run(s, globalFlags, pipelineFlags, test, args)
 }
 
 func (s *OptionsSuite) TestBuildOptions() {
-	args := defaultArgs("--build-id", "fake-build-id")
+	args := defaultArgs("--run-id", "fake-build-id")
 	test := func(c *cli.Context) {
 		opts, err := core.NewBuildOptions(util.NewCLISettings(c), emptyEnv())
 		s.Nil(err)
-		s.Equal("fake-build-id", opts.PipelineID)
-		s.Equal("fake-build-id", opts.BuildID)
-		s.Equal("", opts.DeployID)
+		s.Equal("fake-build-id", opts.RunID)
 	}
 	run(s, globalFlags, pipelineFlags, test, args)
 }
@@ -189,21 +186,18 @@ func (s *OptionsSuite) TestEmptyDeployOptions() {
 	test := func(c *cli.Context) {
 		opts, err := core.NewDeployOptions(util.NewCLISettings(c), emptyEnv())
 		s.Nil(err)
-		s.NotEqual("", opts.DeployID)
-		s.Equal(opts.DeployID, opts.PipelineID)
-		s.Equal("", opts.BuildID)
+		s.NotEqual("", opts.RunID)
+		s.Equal(opts.RunID, opts.RunID)
 	}
 	run(s, globalFlags, pipelineFlags, test, args)
 }
 
 func (s *OptionsSuite) TestDeployOptions() {
-	args := defaultArgs("--deploy-id", "fake-deploy-id")
+	args := defaultArgs("--run-id", "fake-deploy-id")
 	test := func(c *cli.Context) {
 		opts, err := core.NewDeployOptions(util.NewCLISettings(c), emptyEnv())
 		s.Nil(err)
-		s.Equal("fake-deploy-id", opts.PipelineID)
-		s.Equal("fake-deploy-id", opts.DeployID)
-		s.Equal("", opts.BuildID)
+		s.Equal("fake-deploy-id", opts.RunID)
 	}
 	run(s, globalFlags, pipelineFlags, test, args)
 }

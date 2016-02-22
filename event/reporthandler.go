@@ -62,7 +62,7 @@ type ReportHandler struct {
 // BuildStepStarted will handle the BuildStepStarted event.
 func (h *ReportHandler) StepStarted(args *core.BuildStepStartedArgs) {
 	opts := reporter.RunStepStartedArgs{
-		RunID:      args.Options.PipelineID,
+		RunID:      args.Options.RunID,
 		StepSafeID: args.Step.SafeID(),
 	}
 
@@ -87,7 +87,7 @@ func (h *ReportHandler) StepFinished(args *core.BuildStepFinishedArgs) {
 	}
 
 	opts := reporter.RunStepFinishedArgs{
-		RunID:               args.Options.PipelineID,
+		RunID:               args.Options.RunID,
 		StepSafeID:          args.Step.SafeID(),
 		Result:              result,
 		ArtifactURL:         args.ArtifactURL,
@@ -112,7 +112,7 @@ func (h *ReportHandler) StepsAdded(args *core.BuildStepsAddedArgs) {
 	steps = append(steps, afterSteps...)
 
 	opts := reporter.RunStepsAddedArgs{
-		RunID: args.Options.PipelineID,
+		RunID: args.Options.RunID,
 		Steps: steps,
 	}
 
@@ -126,7 +126,7 @@ func (h *ReportHandler) getStepOutputWriter(args *core.LogsArgs) (*reporter.LogW
 
 	writer, ok := h.writers[key]
 	if !ok {
-		w, err := reporter.NewLogWriter(h.reporter, args.Options.PipelineID, args.Step.SafeID(), args.Stream)
+		w, err := reporter.NewLogWriter(h.reporter, args.Options.RunID, args.Step.SafeID(), args.Stream)
 		if err != nil {
 			return nil, err
 		}
@@ -158,7 +158,7 @@ func (h *ReportHandler) Logs(args *core.LogsArgs) {
 // BuildFinished will handle the BuildFinished event.
 func (h *ReportHandler) PipelineFinished(args *core.BuildFinishedArgs) {
 	opts := reporter.RunFinishedArgs{
-		RunID:  args.Options.PipelineID,
+		RunID:  args.Options.RunID,
 		Result: args.Result,
 	}
 	h.reporter.RunFinished(context.TODO(), opts)

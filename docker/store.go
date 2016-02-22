@@ -86,7 +86,7 @@ func (s *StoreContainerStep) DockerRepo() string {
 	if s.options.Repository != "" {
 		return s.options.Repository
 	}
-	return fmt.Sprintf("build-%s", s.options.BuildID)
+	return fmt.Sprintf("run-%s", s.options.RunID)
 }
 
 // DockerTag calculates our tag
@@ -101,7 +101,7 @@ func (s *StoreContainerStep) DockerTag() string {
 func (s *StoreContainerStep) DockerMessage() string {
 	message := s.options.Message
 	if message == "" {
-		message = fmt.Sprintf("Build %s", s.options.BuildID)
+		message = fmt.Sprintf("Run %s", s.options.RunID)
 	}
 	return message
 }

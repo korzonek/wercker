@@ -119,9 +119,8 @@ func (s *DockerStep) CollectArtifact(containerID string) (*core.Artifact, error)
 		HostTarPath:   s.options.HostPath(s.SafeID(), "output.tar"),
 		HostPath:      s.options.HostPath(s.SafeID(), "output"),
 		ApplicationID: s.options.ApplicationID,
-		BuildID:       s.options.BuildID,
-		DeployID:      s.options.DeployID,
-		BuildStepID:   s.SafeID(),
+		RunID:         s.options.RunID,
+		RunStepID:     s.SafeID(),
 		Bucket:        s.options.S3Bucket,
 		ContentType:   "application/x-tar",
 	}

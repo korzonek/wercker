@@ -47,13 +47,17 @@ func (b *DockerBuild) InitEnv(hostEnv *util.Environment) {
 	a := [][]string{
 		[]string{"BUILD", "true"},
 		[]string{"CI", "true"},
-		[]string{"WERCKER_BUILD_ID", b.options.BuildID},
-		[]string{"WERCKER_BUILD_URL", fmt.Sprintf("%s/#build/%s", b.options.BaseURL, b.options.BuildID)},
+		[]string{"WERCKER_RUN_ID", b.options.RunID},
+		[]string{"WERCKER_RUN_URL", fmt.Sprintf("%s/#run/%s", b.options.BaseURL, b.options.RunID)},
 		[]string{"WERCKER_GIT_DOMAIN", b.options.GitDomain},
 		[]string{"WERCKER_GIT_OWNER", b.options.GitOwner},
 		[]string{"WERCKER_GIT_REPOSITORY", b.options.GitRepository},
 		[]string{"WERCKER_GIT_BRANCH", b.options.GitBranch},
 		[]string{"WERCKER_GIT_COMMIT", b.options.GitCommit},
+
+		// Legacy env vars
+		[]string{"WERCKER_BUILD_ID", b.options.RunID},
+		[]string{"WERCKER_BUILD_URL", fmt.Sprintf("%s/#run/%s", b.options.BaseURL, b.options.RunID)},
 	}
 
 	env.Update(b.CommonEnv())
@@ -68,7 +72,7 @@ func (b *DockerBuild) DockerRepo() string {
 	if b.options.Repository != "" {
 		return b.options.Repository
 	}
-	return fmt.Sprintf("build-%s", b.options.BuildID)
+	return fmt.Sprintf("run-%s", b.options.RunID)
 }
 
 // DockerTag calculates our tag
@@ -83,7 +87,7 @@ func (b *DockerBuild) DockerTag() string {
 func (b *DockerBuild) DockerMessage() string {
 	message := b.options.Message
 	if message == "" {
-		message = fmt.Sprintf("Build %s", b.options.BuildID)
+		message = fmt.Sprintf("Run %s", b.options.RunID)
 	}
 	return message
 }
@@ -100,7 +104,7 @@ func (b *DockerBuild) CollectArtifact(containerID string) (*core.Artifact, error
 		HostPath:      b.options.HostPath("output"),
 		HostTarPath:   b.options.HostPath("output.tar"),
 		ApplicationID: b.options.ApplicationID,
-		BuildID:       b.options.BuildID,
+		RunID:         b.options.RunID,
 		Bucket:        b.options.S3Bucket,
 		ContentType:   "application/x-tar",
 	}
@@ -111,7 +115,7 @@ func (b *DockerBuild) CollectArtifact(containerID string) (*core.Artifact, error
 		HostPath:      b.options.HostPath("output"),
 		HostTarPath:   b.options.HostPath("output.tar"),
 		ApplicationID: b.options.ApplicationID,
-		BuildID:       b.options.BuildID,
+		RunID:         b.options.RunID,
 		Bucket:        b.options.S3Bucket,
 		ContentType:   "application/x-tar",
 	}

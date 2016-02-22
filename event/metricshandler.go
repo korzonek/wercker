@@ -50,14 +50,12 @@ func NewMetricsHandler(opts *core.PipelineOptions) (*MetricsEventHandler, error)
 
 // A MetricsEventHandler reporting to keen.io.
 type MetricsEventHandler struct {
-	keen                *keen.Client
-	startStep           map[string]time.Time
-	startBuild          time.Time
-	versions            *util.Versions
-	numBuildSteps       int
-	numBuildAfterSteps  int
-	numDeploySteps      int
-	numDeployAfterSteps int
+	keen          *keen.Client
+	startStep     map[string]time.Time
+	startRun      time.Time
+	versions      *util.Versions
+	numSteps      int
+	numAfterSteps int
 }
 
 // ListenTo will add eventhandlers to e.
@@ -78,14 +76,14 @@ func newMetricsKeenPayload(now time.Time) *metricsKeenPayload {
 func (h *MetricsEventHandler) BuildStarted(args *core.BuildStartedArgs) {
 	now := time.Now()
 
-	h.startBuild = now
+	h.startRun = now
 
 	p := &MetricsPayload{}
 	h.sendPayload(&sendPayloadArgs{
 		p:         p,
 		options:   args.Options,
 		now:       now,
-		eventName: "buildStarted",
+		eventName: "runStarted",
 	})
 }
 
@@ -93,7 +91,7 @@ func (h *MetricsEventHandler) BuildStarted(args *core.BuildStartedArgs) {
 func (h *MetricsEventHandler) BuildFinished(args *core.BuildFinishedArgs) {
 	now := time.Now()
 
-	elapsed := now.Sub(h.startBuild)
+	elapsed := now.Sub(h.startRun)
 	duration := int64(elapsed.Seconds())
 
 	success := args.Result == "passed"
@@ -107,7 +105,7 @@ func (h *MetricsEventHandler) BuildFinished(args *core.BuildFinishedArgs) {
 		options:   args.Options,
 		box:       args.Box,
 		now:       now,
-		eventName: "buildFinished",
+		eventName: "runFinished",
 	})
 }
 
@@ -127,7 +125,7 @@ func (h *MetricsEventHandler) BuildStepStarted(args *core.BuildStepStartedArgs) 
 		options:   args.Options,
 		box:       args.Box,
 		now:       now,
-		eventName: "buildStepStarted",
+		eventName: "runStepStarted",
 	})
 }
 
@@ -156,19 +154,14 @@ func (h *MetricsEventHandler) BuildStepFinished(args *core.BuildStepFinishedArgs
 		options:   args.Options,
 		box:       args.Box,
 		now:       now,
-		eventName: "buildStepFinished",
+		eventName: "runStepFinished",
 	})
 }
 
 // BuildStepsAdded handles the BuildStepsAdded event.
 func (h *MetricsEventHandler) BuildStepsAdded(args *core.BuildStepsAddedArgs) {
-	if args.Options.BuildID != "" {
-		h.numBuildSteps = len(args.Steps)
-		h.numBuildAfterSteps = len(args.AfterSteps)
-	} else if args.Options.DeployID != "" {
-		h.numDeploySteps = len(args.Steps)
-		h.numDeployAfterSteps = len(args.AfterSteps)
-	}
+	h.numSteps = len(args.Steps)
+	h.numAfterSteps = len(args.AfterSteps)
 }
 
 type sendPayloadArgs struct {
@@ -181,15 +174,13 @@ type sendPayloadArgs struct {
 
 func (h *MetricsEventHandler) sendPayload(args *sendPayloadArgs) {
 	collection := getCollection(args.options)
-	pipelineName := getPipelineName(args.options)
 	boxName, boxTag := getBoxDetails(args.box)
 
 	p := args.p
 
 	p.Keen = newMetricsKeenPayload(args.now)
 	p.Timestamp = args.now.Unix()
-	p.BuildID = args.options.BuildID
-	p.DeployID = args.options.DeployID
+	p.RunID = args.options.RunID
 	p.Event = args.eventName
 	p.StartedBy = args.options.ApplicationStartedByName
 	p.MetricsApplicationPayload = &metricsApplicationPayload{
@@ -199,11 +190,9 @@ func (h *MetricsEventHandler) sendPayload(args *sendPayloadArgs) {
 	}
 	p.SentCli = h.versions
 	p.Stack = 5
-	p.NumBuildSteps = h.numBuildSteps
-	p.NumBuildAfterSteps = h.numBuildAfterSteps
-	p.NumDeploySteps = h.numDeploySteps
-	p.NumDeployAfterSteps = h.numDeployAfterSteps
-	p.PipelineName = pipelineName
+	p.NumSteps = h.numSteps
+	p.NumAfterSteps = h.numAfterSteps
+	p.PipelineName = args.options.Pipeline
 	p.BoxName = boxName
 	p.BoxTag = boxTag
 	h.keen.AddEvent(collection, p)
@@ -250,13 +239,10 @@ type MetricsPayload struct {
 	Grappler     *util.Versions      `json:"grappler,omitempty"`
 	PipelineName string              `json:"pipelineName,omitempty"`
 
-	BuildID  string `json:"buildId,omitempty"`
-	DeployID string `json:"deployId,omitempty"`
+	RunID string `json:"runId,omitempty"`
 
-	NumBuildSteps       int `json:"numBuildSteps,omitempty"`
-	NumBuildAfterSteps  int `json:"numBuildAfterSteps,omitempty"`
-	NumDeploySteps      int `json:"numDeploySteps,omitempty"`
-	NumDeployAfterSteps int `json:"numDeployAfterSteps,omitempty"`
+	NumSteps      int `json:"numSteps,omitempty"`
+	NumAfterSteps int `json:"numAfterSteps,omitempty"`
 
 	BoxName string `json:"box,omitempty"`
 	BoxTag  string `json:"boxTag,omitempty"`
@@ -276,30 +262,8 @@ type MetricsPayload struct {
 	MetricsApplicationPayload *metricsApplicationPayload `json:"application,omitempty"`
 }
 
-func getPipelineName(options *core.PipelineOptions) string {
-	if options.BuildID != "" {
-		return "build"
-	}
-
-	if options.DeployID != "" {
-		return "deploy"
-	}
-
-	util.RootLogger().WithField("Logger", "Metrics").Panic("Metrics is only able to send metrics for builds or deploys")
-	return ""
-}
-
 func getCollection(options *core.PipelineOptions) string {
-	if options.BuildID != "" {
-		return "build-events"
-	}
-
-	if options.DeployID != "" {
-		return "deploy-events"
-	}
-
-	util.RootLogger().WithField("Logger", "Metrics").Panic("Metrics is only able to send metrics for builds or deploys")
-	return ""
+	return "pipeline-events"
 }
 
 func getBoxDetails(box core.Box) (boxName string, boxTag string) {

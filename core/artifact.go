@@ -30,9 +30,8 @@ type Artifact struct {
 	HostTarPath   string
 	HostPath      string
 	ApplicationID string
-	BuildID       string
-	DeployID      string
-	BuildStepID   string
+	RunID         string
+	RunStepID     string
 	Bucket        string
 	Key           string
 	ContentType   string
@@ -49,16 +48,14 @@ func (art *Artifact) RemotePath() string {
 	if art.Key != "" {
 		return art.Key
 	}
-	path := fmt.Sprintf("project-artifacts/%s", art.ApplicationID)
-	if art.DeployID != "" {
-		path = fmt.Sprintf("%s/deploy/%s", path, art.DeployID)
-	} else {
-		path = fmt.Sprintf("%s/build/%s", path, art.BuildID)
+
+	path := fmt.Sprintf("project-artifacts/%s/%s", art.ApplicationID, art.RunID)
+	if art.RunStepID != "" {
+		path = fmt.Sprintf("%s/step/%s", path, art.RunStepID)
 	}
-	if art.BuildStepID != "" {
-		path = fmt.Sprintf("%s/step/%s", path, art.BuildStepID)
-	}
+
 	path = fmt.Sprintf("%s/%s", path, filepath.Base(art.HostPath))
+
 	return path
 }
 

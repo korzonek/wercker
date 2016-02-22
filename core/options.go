@@ -321,9 +321,7 @@ type PipelineOptions struct {
 	//               places by BasePipeline
 	HostEnv *util.Environment
 
-	BuildID      string
-	DeployID     string
-	PipelineID   string
+	RunID        string
 	DeployTarget string
 	Pipeline     string
 
@@ -502,14 +500,8 @@ func NewPipelineOptions(c util.Settings, e *util.Environment) (*PipelineOptions,
 		return nil, err
 	}
 
-	buildID, _ := c.String("build-id")
-	deployID, _ := c.String("deploy-id")
-	pipelineID := ""
-	if deployID != "" {
-		pipelineID = deployID
-	} else {
-		pipelineID = buildID
-	}
+	runID, _ := c.String("run-id")
+
 	deployTarget, _ := c.String("deploy-target")
 	pipeline, _ := c.String("pipeline")
 
@@ -573,9 +565,7 @@ func NewPipelineOptions(c util.Settings, e *util.Environment) (*PipelineOptions,
 
 		HostEnv: e,
 
-		BuildID:      buildID,
-		DeployID:     deployID,
-		PipelineID:   pipelineID,
+		RunID:        runID,
 		DeployTarget: deployTarget,
 		Pipeline:     pipeline,
 
@@ -622,7 +612,7 @@ func (o *PipelineOptions) SourcePath() string {
 
 // HostPath returns a path relative to the build root on the host.
 func (o *PipelineOptions) HostPath(s ...string) string {
-	return path.Join(o.BuildPath(), o.PipelineID, path.Join(s...))
+	return path.Join(o.BuildPath(), o.RunID, path.Join(s...))
 }
 
 // WorkingPath returns paths relative to our working dir (usually ".wercker")
@@ -680,9 +670,8 @@ func NewBuildOptions(c util.Settings, e *util.Environment) (*PipelineOptions, er
 	if err != nil {
 		return nil, err
 	}
-	if pipelineOpts.BuildID == "" {
-		pipelineOpts.BuildID = uuid.NewRandom().String()
-		pipelineOpts.PipelineID = pipelineOpts.BuildID
+	if pipelineOpts.RunID == "" {
+		pipelineOpts.RunID = uuid.NewRandom().String()
 	}
 	return pipelineOpts, nil
 }
@@ -726,9 +715,8 @@ func NewDeployOptions(c util.Settings, e *util.Environment) (*PipelineOptions, e
 
 	}
 
-	if pipelineOpts.DeployID == "" {
-		pipelineOpts.DeployID = uuid.NewRandom().String()
-		pipelineOpts.PipelineID = pipelineOpts.DeployID
+	if pipelineOpts.RunID == "" {
+		pipelineOpts.RunID = uuid.NewRandom().String()
 	}
 	return pipelineOpts, nil
 }

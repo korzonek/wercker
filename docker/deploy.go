@@ -49,13 +49,17 @@ func (d *DockerDeploy) InitEnv(hostEnv *util.Environment) {
 
 	a := [][]string{
 		[]string{"DEPLOY", "true"},
-		[]string{"WERCKER_DEPLOY_ID", d.options.DeployID},
-		[]string{"WERCKER_DEPLOY_URL", fmt.Sprintf("%s/#deploy/%s", d.options.BaseURL, d.options.DeployID)},
+		[]string{"WERCKER_RUN_ID", d.options.RunID},
+		[]string{"WERCKER_RUN_URL", fmt.Sprintf("%s/#run/%s", d.options.BaseURL, d.options.RunID)},
 		[]string{"WERCKER_GIT_DOMAIN", d.options.GitDomain},
 		[]string{"WERCKER_GIT_OWNER", d.options.GitOwner},
 		[]string{"WERCKER_GIT_REPOSITORY", d.options.GitRepository},
 		[]string{"WERCKER_GIT_BRANCH", d.options.GitBranch},
 		[]string{"WERCKER_GIT_COMMIT", d.options.GitCommit},
+
+		// Legacy env vars
+		[]string{"WERCKER_DEPLOY_ID", d.options.RunID},
+		[]string{"WERCKER_DEPLOY_URL", fmt.Sprintf("%s/#run/%s", d.options.BaseURL, d.options.RunID)},
 	}
 
 	if d.options.DeployTarget != "" {
@@ -81,7 +85,7 @@ func (d *DockerDeploy) DockerRepo() string {
 func (d *DockerDeploy) DockerTag() string {
 	tag := d.options.Tag
 	if tag == "" {
-		tag = fmt.Sprintf("deploy-%s", d.options.DeployID)
+		tag = fmt.Sprintf("run-%s", d.options.RunID)
 	}
 	return tag
 }
@@ -90,7 +94,7 @@ func (d *DockerDeploy) DockerTag() string {
 func (d *DockerDeploy) DockerMessage() string {
 	message := d.options.Message
 	if message == "" {
-		message = fmt.Sprintf("Build %s", d.options.DeployID)
+		message = fmt.Sprintf("Run %s", d.options.RunID)
 	}
 	return message
 }
@@ -107,7 +111,7 @@ func (d *DockerDeploy) CollectArtifact(containerID string) (*core.Artifact, erro
 		HostPath:      d.options.HostPath("output"),
 		HostTarPath:   d.options.HostPath("output.tar"),
 		ApplicationID: d.options.ApplicationID,
-		DeployID:      d.options.DeployID,
+		RunID:         d.options.RunID,
 		Bucket:        d.options.S3Bucket,
 		ContentType:   "application/x-tar",
 	}

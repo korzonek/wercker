@@ -96,7 +96,7 @@ func NewInternalServiceBox(boxConfig *core.BoxConfig, options *core.PipelineOpti
 
 // TODO(mh) need to add to interface?
 func (b *InternalServiceBox) getContainerName() string {
-	containerName := fmt.Sprintf("wercker-service-%s-%s", strings.Replace(b.Name, "/", "-", -1), b.options.PipelineID)
+	containerName := fmt.Sprintf("wercker-service-%s-%s", strings.Replace(b.Name, "/", "-", -1), b.options.RunID)
 	containerName = strings.Replace(containerName, ":", "_", -1)
 	return strings.Replace(containerName, ":", "_", -1)
 }
