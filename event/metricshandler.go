@@ -235,7 +235,7 @@ type MetricsPayload struct {
 	Timestamp    int64               `json:"timestamp"`
 	Event        string              `json:"event"`
 	Stack        int                 `json:"stack,omitempty"`
-	SentCli      *util.Versions      `json:"wercker,omitempty"`
+	SentCli      *util.Versions      `json:"sentcli,omitempty"`
 	Grappler     *util.Versions      `json:"grappler,omitempty"`
 	PipelineName string              `json:"pipelineName,omitempty"`
 
