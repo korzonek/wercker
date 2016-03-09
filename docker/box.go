@@ -126,7 +126,11 @@ func (b *DockerBox) links() []string {
 
 // Link gives us the parameter to Docker to link to this box
 func (b *DockerBox) Link() string {
-	return fmt.Sprintf("%s:%s", b.container.Name, b.ShortName)
+	name := b.config.Name
+	if name == "" {
+		name = b.ShortName
+	}
+	return fmt.Sprintf("%s:%s", b.container.Name, name)
 }
 
 // GetName gets the box name
