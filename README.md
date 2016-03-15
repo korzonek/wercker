@@ -1,5 +1,5 @@
 # wercker - your new favorite dev tool
-[![wercker status](https://app.wercker.com/status/febe6e1691586f99d20eb79c6b706aaa/s/master "wercker status")](https://app.wercker.com/project/bykey/febe6e1691586f99d20eb79c6b706aaa)
+[![wercker status](https://app.wercker.com/status/febe6e1691586f99d20eb79c6b706aaa/s/master "wercker status")](https://app.wercker.com/project/bykey/febe6e1691586f99d20eb79c6b706aaa)[![codebeat](https://codebeat.co/badges/fd60a63d-c281-41fa-8e7a-34cf58c89e04)](https://codebeat.co/projects/github-com-wercker-wercker)
 
 This is the project for `wercker`, the command-line tool that powers
 all the build and deploy jobs for [wercker.com](http://wercker.com), it
